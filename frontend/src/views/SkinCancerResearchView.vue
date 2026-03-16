@@ -10,7 +10,7 @@
       </p>
 
       <div class="card">
-        <h3>Melanoma Incidence Rates in Australia (1982–2017)</h3>
+        <h3>Melanoma Incidence Rates in Australia (1968–2011)</h3>
         <p class="chart-desc">Age-standardised rates per 100,000 population by sex</p>
         <div class="chart-wrap">
           <canvas ref="cancerChart"></canvas>
@@ -35,9 +35,9 @@
         <h3>Key Statistics</h3>
         <table>
           <tr><th>Indicator</th><th>Value</th></tr>
-          <tr><td>Lifetime risk</td><td>66% (2 in 3 Australians)</td></tr>
-          <tr><td>Melanoma survival rate</td><td>94%</td></tr>
-          <tr><td>Skin cancers caused by UV</td><td>95%</td></tr>
+          <tr><td>Lifetime risk</td><td>2 in 3 Australians</td></tr>
+          <tr><td>Melanoma survival rate</td><td>~94%</td></tr>
+          <tr><td>Skin cancers linked to UV exposure</td><td>~95%</td></tr>
           <tr><td>New melanoma cases each year</td><td>~15,000</td></tr>
           <tr><td>Annual deaths</td><td>~2,000</td></tr>
         </table>
@@ -99,16 +99,21 @@ async function loadCancerChart() {
         tension: 0.3,
         fill: true,
         pointRadius: 2,
+        spanGaps: true,
       })),
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { labels: { color: "white" } },
-        tooltip: { mode: "index" },
+        tooltip: { mode: "index", intersect: false },
       },
       scales: {
-        x: { ticks: { color: "white" }, grid: { color: "rgba(255,255,255,0.1)" } },
+        x: {
+          ticks: { color: "white" },
+          grid: { color: "rgba(255,255,255,0.1)" },
+        },
         y: {
           ticks: { color: "white" },
           grid: { color: "rgba(255,255,255,0.1)" },
@@ -126,7 +131,7 @@ async function loadTempChart() {
   }
 
   const data = await res.json()
-  cities.value = data.cities
+  cities.value = data.cities || []
 
   if (tempChartInstance) {
     tempChartInstance.destroy()
@@ -143,15 +148,20 @@ async function loadTempChart() {
         tension: 0.3,
         fill: true,
         pointRadius: 2,
+        spanGaps: true,
       })),
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { labels: { color: "white" } },
       },
       scales: {
-        x: { ticks: { color: "white" }, grid: { color: "rgba(255,255,255,0.1)" } },
+        x: {
+          ticks: { color: "white" },
+          grid: { color: "rgba(255,255,255,0.1)" },
+        },
         y: {
           ticks: { color: "white" },
           grid: { color: "rgba(255,255,255,0.1)" },
@@ -162,15 +172,24 @@ async function loadTempChart() {
   })
 }
 
-function openSunSmart() { window.open("https://www.sunsmart.com.au") }
-function openCancer() { window.open("https://www.cancer.org.au") }
-function openWHO() { window.open("https://www.who.int") }
+function openSunSmart() {
+  window.open("https://www.sunsmart.com.au", "_blank")
+}
+
+function openCancer() {
+  window.open("https://www.cancer.org.au", "_blank")
+}
+
+function openWHO() {
+  window.open("https://www.who.int", "_blank")
+}
 
 onMounted(async () => {
   try {
     await loadCancerChart()
     await loadTempChart()
-  } catch {
+  } catch (error) {
+    console.error(error)
     alert("Failed to load research data")
   }
 })
@@ -219,10 +238,20 @@ onMounted(async () => {
   color: white;
   cursor: pointer;
 }
-.city-select select option { background: #333; color: white; }
+.city-select select option {
+  background: #333;
+  color: white;
+}
 table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-th { text-align: left; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.3); }
-td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+th {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+}
+td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
 ul { padding-left: 20px; line-height: 1.7; }
 .links { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
 button {
