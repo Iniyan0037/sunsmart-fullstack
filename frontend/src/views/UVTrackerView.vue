@@ -52,6 +52,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 
+const API_BASE = import.meta.env.VITE_API_BASE;
 const router = useRouter();
 
 // State variables
@@ -73,7 +74,6 @@ function goResearch() {
 
 /**
  * Step 1: Search latitude/longitude via Postcode
- * (Keeping this simple via public API, or you can move to backend too)
  */
 async function searchPostcode() {
   if (!postcode.value) return;
@@ -90,7 +90,6 @@ async function searchPostcode() {
     const lon = data.places[0].longitude;
     location.value = data.places[0]["place name"];
 
-    // Trigger UV fetch from OUR backend
     getUV(lat, lon);
   } catch (error) {
     console.error("Postcode search failed:", error);
@@ -111,37 +110,29 @@ function getLocation() {
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
     location.value = "Current Location";
-    
-    // Trigger UV fetch from OUR backend
+
     getUV(lat, lon);
   });
 }
 
 /**
- * Step 3: Fetch UV Index from YOUR BACKEND
- * This satisfies the requirement: "Not directly access the external API"
+ * Step 3: Fetch UV Index from backend
  */
 async function getUV(lat, lon) {
   try {
-    // 关键修改：请求地址指向你本地运行的 Node.js 后端
-    const backendUrl = `http://3.107.240.160:3000/api/uv?lat=${lat}&lon=${lon}`;
-    
+    const backendUrl = `${API_BASE}/api/uv?lat=${lat}&lon=${lon}`;
     const res = await fetch(backendUrl);
-    
+
     if (!res.ok) {
       throw new Error("Backend server error");
     }
 
     const data = await res.json();
-
-    // 根据后端返回的数据结构更新（假设后端返回 { uv_index: 5.2 }）
     uv.value = parseFloat(data.uv_index).toFixed(1);
-
-    // Update UI levels and colors
     setLevel();
   } catch (error) {
     console.error("Error fetching from backend:", error);
-    alert("Failed to fetch UV data from backend server. Make sure your server.js is running!");
+    alert("Failed to fetch UV data from backend server.");
   }
 }
 
@@ -174,7 +165,6 @@ function setLevel() {
 </script>
 
 <style scoped>
-/* 保持你原来的样式不变 */
 .page {
   width: 100%;
   min-height: 100vh;
@@ -218,18 +208,21 @@ function setLevel() {
 }
 
 .location input {
-  padding: 10px;
-  border-radius: 8px;
+  padding: 12px;
+  width: 250px;
+  border-radius: 10px;
   border: none;
-  width: 200px;
+  outline: none;
+  font-size: 16px;
 }
 
 .location button {
-  padding: 10px 20px;
+  padding: 12px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #3498db;
   color: white;
+  font-weight: bold;
   cursor: pointer;
 }
 
@@ -239,75 +232,76 @@ function setLevel() {
 
 .uvCard {
   text-align: center;
-  margin-bottom: 30px;
+  margin: 30px 0;
 }
 
 .circle {
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
+  margin: 20px auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  font-size: 42px;
+  font-weight: bold;
   color: white;
-  margin: 10px auto;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .level {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: bold;
 }
 
 .barSection {
-  margin-bottom: 40px;
-  text-align: center;
+  margin: 30px 0;
 }
 
 .uvBar {
-  height: 16px;
-  background: linear-gradient(to right, #2ecc71, #f1c40f, #e67e22, #e74c3c, #8e44ad);
+  height: 14px;
   border-radius: 10px;
+  background: linear-gradient(
+    to right,
+    #2ecc71 0%,
+    #f1c40f 25%,
+    #e67e22 50%,
+    #e74c3c 75%,
+    #8e44ad 100%
+  );
   position: relative;
-  margin-top: 10px;
 }
 
 .marker {
-  width: 10px;
+  position: absolute;
+  top: -6px;
+  width: 4px;
   height: 26px;
   background: white;
-  position: absolute;
-  top: -5px;
-  border-radius: 2px;
-  transition: 0.4s ease-out;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
 }
 
 .labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
-  font-size: 13px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: bold;
 }
 
-.low { color: #2ecc71; }
-.moderate { color: #f1c40f; }
-.high { color: #e67e22; }
-.veryhigh { color: #e74c3c; }
-.extreme { color: #8e44ad; }
-
 .card {
+  margin-top: 25px;
+  padding: 20px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.15);
-  padding: 25px;
-  border-radius: 12px;
-  margin-bottom: 25px;
   cursor: pointer;
   transition: 0.3s;
 }
 
 .card:hover {
   background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-3px);
+}
+
+.card h3 {
+  margin-bottom: 10px;
 }
 </style>
