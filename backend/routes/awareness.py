@@ -21,16 +21,28 @@ def cancer_stats():
                 ORDER BY year ASC
                 """
             )
-        ).fetchall()
+        ).mappings().all()
 
         male_data = {}
         female_data = {}
 
         for row in result:
-            if row.sex == "Male":
-                male_data[row.year] = round(float(row.age_std_rate_aust), 2)
-            elif row.sex == "Female":
-                female_data[row.year] = round(float(row.age_std_rate_aust), 2)
+            year = row["year"]
+            sex = row["sex"]
+            rate = row["age_std_rate_aust"]
+
+            if year is None or sex is None or rate is None:
+                continue
+
+            try:
+                rate_value = float(rate)
+            except (TypeError, ValueError):
+                continue
+
+            if sex == "Male":
+                male_data[int(year)] = round(rate_value, 2)
+            elif sex == "Female":
+                female_data[int(year)] = round(rate_value, 2)
 
         years = sorted(set(male_data.keys()) | set(female_data.keys()))
 
@@ -40,13 +52,13 @@ def cancer_stats():
                 "datasets": [
                     {
                         "label": "Male",
-                        "data": [male_data.get(y) for y in years],
+                        "data": [male_data.get(y, None) for y in years],
                         "borderColor": "#3498db",
                         "backgroundColor": "rgba(52,152,219,0.2)",
                     },
                     {
                         "label": "Female",
-                        "data": [female_data.get(y) for y in years],
+                        "data": [female_data.get(y, None) for y in years],
                         "borderColor": "#e74c3c",
                         "backgroundColor": "rgba(231,76,60,0.2)",
                     },
@@ -77,15 +89,21 @@ def uv_trends():
                 """
             ),
             {"city": city},
-        ).fetchall()
+        ).mappings().all()
 
-        years = [int(row.year) for row in result]
-        temps = [float(row.avg_temp) for row in result]
+        years = []
+        temps = []
+
+        for row in result:
+            if row["year"] is None or row["avg_temp"] is None:
+                continue
+            years.append(int(row["year"]))
+            temps.append(float(row["avg_temp"]))
 
         cities_result = db.execute(
-            text("SELECT DISTINCT city FROM uv_summary ORDER BY city")
-        ).fetchall()
-        cities = [row.city for row in cities_result]
+            text("SELECT DISTINCT city FROM uv_summary WHERE city IS NOT NULL ORDER BY city")
+        ).mappings().all()
+        cities = [row["city"] for row in cities_result]
 
         return jsonify(
             {
