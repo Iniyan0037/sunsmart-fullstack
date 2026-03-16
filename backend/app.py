@@ -3,9 +3,8 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_cors import CORS
-from sqlalchemy import inspect, text
 
-from database import Base, SessionLocal, engine
+from database import Base, engine
 
 import models  # noqa: F401
 
@@ -51,35 +50,6 @@ def health():
             "status": "ok",
         }
     )
-
-
-@app.get("/api/debug/db-status")
-def debug_db_status():
-    try:
-        inspector = inspect(engine)
-        tables = inspector.get_table_names()
-
-        db = SessionLocal()
-        try:
-            counts = {}
-            for table_name in ["cancer_rates", "cancer_ratios", "uv_summary"]:
-                if table_name in tables:
-                    counts[table_name] = int(
-                        db.execute(text(f"SELECT COUNT(*) FROM {table_name}")).scalar() or 0
-                    )
-                else:
-                    counts[table_name] = None
-        finally:
-            db.close()
-
-        return jsonify(
-            {
-                "tables": tables,
-                "row_counts": counts,
-            }
-        )
-    except Exception as e:
-        return jsonify({"error": "DB debug failed", "details": str(e)}), 500
 
 
 if __name__ == "__main__":
