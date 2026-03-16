@@ -1,4 +1,5 @@
 import os
+import traceback
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify
@@ -89,7 +90,16 @@ def init_db():
             }
         )
     except Exception as e:
-        return jsonify({"error": "Database initialisation failed", "details": str(e)}), 500
+        return (
+            jsonify(
+                {
+                    "error": "Database initialisation failed",
+                    "details": str(e),
+                    "trace": traceback.format_exc(),
+                }
+            ),
+            500,
+        )
 
 
 if __name__ == "__main__":
