@@ -1,3 +1,5 @@
+import math
+
 from flask import Blueprint, jsonify, request
 from sqlalchemy import text
 
@@ -37,6 +39,9 @@ def cancer_stats():
             try:
                 rate_value = float(rate)
             except (TypeError, ValueError):
+                continue
+
+            if math.isnan(rate_value) or math.isinf(rate_value):
                 continue
 
             if sex == "Male":
@@ -95,10 +100,22 @@ def uv_trends():
         temps = []
 
         for row in result:
-            if row["year"] is None or row["avg_temp"] is None:
+            year = row["year"]
+            avg_temp = row["avg_temp"]
+
+            if year is None or avg_temp is None:
                 continue
-            years.append(int(row["year"]))
-            temps.append(float(row["avg_temp"]))
+
+            try:
+                temp_value = float(avg_temp)
+            except (TypeError, ValueError):
+                continue
+
+            if math.isnan(temp_value) or math.isinf(temp_value):
+                continue
+
+            years.append(int(year))
+            temps.append(temp_value)
 
         cities_result = db.execute(
             text("SELECT DISTINCT city FROM uv_summary WHERE city IS NOT NULL ORDER BY city")
