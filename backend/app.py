@@ -1,5 +1,4 @@
 import os
-import traceback
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify
@@ -13,7 +12,6 @@ import models  # noqa: F401
 from routes.awareness import awareness_bp
 from routes.prevention import prevention_bp
 from routes.uv import uv_bp
-from seed import seed_database
 
 load_dotenv()
 
@@ -76,30 +74,6 @@ def debug_db_status():
         )
     except Exception as e:
         return jsonify({"error": "DB debug failed", "details": str(e)}), 500
-
-
-@app.get("/api/admin/init-db")
-def init_db():
-    try:
-        Base.metadata.create_all(bind=engine)
-        summary = seed_database()
-        return jsonify(
-            {
-                "message": "Database initialised successfully",
-                "summary": summary,
-            }
-        )
-    except Exception as e:
-        return (
-            jsonify(
-                {
-                    "error": "Database initialisation failed",
-                    "details": str(e),
-                    "trace": traceback.format_exc(),
-                }
-            ),
-            500,
-        )
 
 
 if __name__ == "__main__":
