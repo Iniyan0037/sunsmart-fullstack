@@ -26,7 +26,13 @@ frontend_origins = [origin.strip() for origin in frontend_origins_raw.split(",")
 
 CORS(
     app,
-    resources={r"/api/*": {"origins": frontend_origins}},
+    resources={
+        r"/api/*": {
+            "origins": frontend_origins,
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+        }
+    },
 )
 
 Base.metadata.create_all(bind=engine)
