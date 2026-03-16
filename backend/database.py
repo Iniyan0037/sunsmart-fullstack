@@ -1,15 +1,28 @@
+import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-import os
-from dotenv import load_dotenv
 
 load_dotenv()
 
 db_url = os.getenv("DATABASE_URL")
 
-if db_url and db_url.startswith("postgres://"):
+if not db_url:
+    raise RuntimeError("DATABASE_URL is not set")
+
+if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(db_url)
-SessionLocal = sessionmaker(bind=engine)
+engine = create_engine(
+    db_url,
+    pool_pre_ping=True,
+)
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+)
+
 Base = declarative_base()
