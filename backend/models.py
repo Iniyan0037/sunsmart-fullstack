@@ -1,9 +1,12 @@
-from sqlalchemy import Column, Integer, Float, String
+from sqlalchemy import Column, Float, Integer, String
+
 from database import Base
+
 
 class CancerRate(Base):
     __tablename__ = "cancer_rates"
-    id = Column(Integer, primary_key=True)
+
+    id = Column(Integer, primary_key=True, index=True)
     year = Column(Integer)
     sex = Column(String)
     type = Column(String)
@@ -12,9 +15,11 @@ class CancerRate(Base):
     age_std_rate_segi = Column(Float)
     age_std_rate_who = Column(Float)
 
+
 class CancerRatio(Base):
     __tablename__ = "cancer_ratios"
-    id = Column(Integer, primary_key=True)
+
+    id = Column(Integer, primary_key=True, index=True)
     year = Column(Integer)
     sex = Column(String)
     cancer_type = Column(String)
@@ -22,9 +27,11 @@ class CancerRatio(Base):
     segi_ratio = Column(Float)
     who_ratio = Column(Float)
 
+
 class UVSummary(Base):
     __tablename__ = "uv_summary"
-    id = Column(Integer, primary_key=True)
+
+    id = Column(Integer, primary_key=True, index=True)
     city = Column(String)
     generation = Column(String)
     date = Column(String)
