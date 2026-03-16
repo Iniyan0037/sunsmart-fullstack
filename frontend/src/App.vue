@@ -3,17 +3,13 @@ import BottomNav from "./components/BottomNav.vue"
 </script>
 
 <template>
-
-<div id="app">
-<router-view/>
-<BottomNav/>
-</div>
-
+  <div id="app">
+    <router-view />
+    <BottomNav />
+  </div>
 </template>
 
-
 <style>
-
 html {
   overflow-x: hidden;
 }
@@ -25,7 +21,6 @@ html, body, #app {
   min-height: 100vh;
   font-family: Arial, Helvetica, sans-serif;
   box-sizing: border-box;
-
 }
 
 *, *::before, *::after {
