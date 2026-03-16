@@ -64,6 +64,7 @@ try:
     print("cancer_ratios done.")
 
     print("Seeding uv_summary...")
+    # This file is actually CSV-formatted despite the .xls name
     df3 = pd.read_csv(DATASETS_DIR / "DAILY_SUMMARY_all_cities.xls")
     df3.columns = df3.columns.str.strip()
 
