@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: "https://sunsmart-frontend.onrender.com"
+  origin: "https://sunsmart-fullstack-1.onrender.com"
 }));
 app.use(express.json());
 
