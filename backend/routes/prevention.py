@@ -2,7 +2,8 @@ from flask import Blueprint, jsonify, request
 
 prevention_bp = Blueprint("prevention", __name__)
 
-@prevention_bp.route("/api/sunscreen")
+
+@prevention_bp.route("/api/sunscreen", methods=["GET"])
 def sunscreen():
     try:
         uv = float(request.args.get("uv", 0))
@@ -40,17 +41,19 @@ def sunscreen():
         reapply = 45
         note = "Extreme UV. Maximum protection required."
 
-    return jsonify({
-        "uv_index": uv,
-        "recommended_spf": spf,
-        "face_teaspoons": face,
-        "body_teaspoons": body,
-        "reapply_minutes": reapply,
-        "note": note
-    })
+    return jsonify(
+        {
+            "uv_index": uv,
+            "recommended_spf": spf,
+            "face_teaspoons": face,
+            "body_teaspoons": body,
+            "reapply_minutes": reapply,
+            "note": note,
+        }
+    )
 
 
-@prevention_bp.route("/api/clothing")
+@prevention_bp.route("/api/clothing", methods=["GET"])
 def clothing():
     try:
         uv = float(request.args.get("uv", 0))
@@ -67,14 +70,28 @@ def clothing():
         items = ["Long-sleeve shirt (UPF 30+)", "Wide-brim hat", "Sunglasses", "Sunscreen"]
         note = "High UV. Cover as much skin as possible."
     elif uv <= 10:
-        items = ["Long-sleeve shirt (UPF 50+)", "Wide-brim hat", "Wraparound sunglasses", "Sunscreen SPF 50+", "Seek shade"]
+        items = [
+            "Long-sleeve shirt (UPF 50+)",
+            "Wide-brim hat",
+            "Wraparound sunglasses",
+            "Sunscreen SPF 50+",
+            "Seek shade",
+        ]
         note = "Very high UV. Avoid being outdoors 10am-4pm."
     else:
-        items = ["Full coverage clothing (UPF 50+)", "Wide-brim hat", "Wraparound sunglasses", "Sunscreen SPF 50+", "Stay indoors if possible"]
+        items = [
+            "Full coverage clothing (UPF 50+)",
+            "Wide-brim hat",
+            "Wraparound sunglasses",
+            "Sunscreen SPF 50+",
+            "Stay indoors if possible",
+        ]
         note = "Extreme UV. Minimise all outdoor exposure."
 
-    return jsonify({
-        "uv_index": uv,
-        "items": items,
-        "note": note
-    })
+    return jsonify(
+        {
+            "uv_index": uv,
+            "items": items,
+            "note": note,
+        }
+    )
