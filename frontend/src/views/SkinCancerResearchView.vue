@@ -1,7 +1,6 @@
 <template>
   <div class="page">
     <div class="container">
-
       <h1 class="title">🛡 SunGuard</h1>
       <h2 class="subtitle">Skin Cancer Research</h2>
 
@@ -10,18 +9,16 @@
         strongly linked to UV radiation exposure.
       </p>
 
-      <!-- Chart 1: Melanoma incidence -->
       <div class="card">
-        <h3> Melanoma Incidence Rates in Australia (1982–2017)</h3>
+        <h3>Melanoma Incidence Rates in Australia (1982–2017)</h3>
         <p class="chart-desc">Age-standardised rates per 100,000 population by sex</p>
         <div class="chart-wrap">
           <canvas ref="cancerChart"></canvas>
         </div>
       </div>
 
-      <!-- Chart 2: Temperature trends with city selector -->
       <div class="card">
-        <h3> Average Temperature Trends by City (1995–2024)</h3>
+        <h3>Average Temperature Trends by City (1995–2024)</h3>
         <p class="chart-desc">Annual average temperature across Australian capital cities</p>
         <div class="city-select">
           <label>Select city:</label>
@@ -34,9 +31,8 @@
         </div>
       </div>
 
-      <!-- Static facts card -->
       <div class="card">
-        <h3> Key Statistics</h3>
+        <h3>Key Statistics</h3>
         <table>
           <tr><th>Indicator</th><th>Value</th></tr>
           <tr><td>Lifetime risk</td><td>66% (2 in 3 Australians)</td></tr>
@@ -47,7 +43,6 @@
         </table>
       </div>
 
-      <!-- Prevention tips -->
       <div class="card">
         <h3>🛡 Prevention Tips</h3>
         <ul>
@@ -60,62 +55,76 @@
       </div>
 
       <div class="card resources">
-        <h3> Learn More</h3>
+        <h3>Learn More</h3>
         <div class="links">
           <button @click="openSunSmart">SunSmart Australia</button>
           <button @click="openCancer">Cancer Council</button>
           <button @click="openWHO">WHO UV Radiation</button>
         </div>
       </div>
-
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from "vue"
+import { nextTick, onMounted, ref } from "vue"
 import Chart from "chart.js/auto"
+import { API_BASE } from "@/config"
 
 const cancerChart = ref(null)
 const tempChart = ref(null)
 const selectedCity = ref("Melbourne")
 const cities = ref([])
+let cancerChartInstance = null
 let tempChartInstance = null
 
 async function loadCancerChart() {
-  const res = await fetch("/api/cancer-stats")
+  const res = await fetch(`${API_BASE}/api/cancer-stats`)
+  if (!res.ok) {
+    throw new Error("Failed to load cancer stats")
+  }
+
   const data = await res.json()
-  new Chart(cancerChart.value, {
+
+  if (cancerChartInstance) {
+    cancerChartInstance.destroy()
+  }
+
+  cancerChartInstance = new Chart(cancerChart.value, {
     type: "line",
     data: {
       labels: data.labels,
-      datasets: data.datasets.map(d => ({
+      datasets: data.datasets.map((d) => ({
         ...d,
         tension: 0.3,
         fill: true,
-        pointRadius: 2
-      }))
+        pointRadius: 2,
+      })),
     },
     options: {
       responsive: true,
       plugins: {
         legend: { labels: { color: "white" } },
-        tooltip: { mode: "index" }
+        tooltip: { mode: "index" },
       },
       scales: {
         x: { ticks: { color: "white" }, grid: { color: "rgba(255,255,255,0.1)" } },
         y: {
           ticks: { color: "white" },
           grid: { color: "rgba(255,255,255,0.1)" },
-          title: { display: true, text: "Rate per 100,000", color: "white" }
-        }
-      }
-    }
+          title: { display: true, text: "Rate per 100,000", color: "white" },
+        },
+      },
+    },
   })
 }
 
 async function loadTempChart() {
-  const res = await fetch(`/api/uv-trends?city=${selectedCity.value}`)
+  const res = await fetch(`${API_BASE}/api/uv-trends?city=${encodeURIComponent(selectedCity.value)}`)
+  if (!res.ok) {
+    throw new Error("Failed to load temperature chart")
+  }
+
   const data = await res.json()
   cities.value = data.cities
 
@@ -129,27 +138,27 @@ async function loadTempChart() {
     type: "line",
     data: {
       labels: data.labels,
-      datasets: data.datasets.map(d => ({
+      datasets: data.datasets.map((d) => ({
         ...d,
         tension: 0.3,
         fill: true,
-        pointRadius: 2
-      }))
+        pointRadius: 2,
+      })),
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { labels: { color: "white" } }
+        legend: { labels: { color: "white" } },
       },
       scales: {
         x: { ticks: { color: "white" }, grid: { color: "rgba(255,255,255,0.1)" } },
         y: {
           ticks: { color: "white" },
           grid: { color: "rgba(255,255,255,0.1)" },
-          title: { display: true, text: "Avg Temperature (°C)", color: "white" }
-        }
-      }
-    }
+          title: { display: true, text: "Avg Temperature (°C)", color: "white" },
+        },
+      },
+    },
   })
 }
 
@@ -158,8 +167,12 @@ function openCancer() { window.open("https://www.cancer.org.au") }
 function openWHO() { window.open("https://www.who.int") }
 
 onMounted(async () => {
-  await loadCancerChart()
-  await loadTempChart()
+  try {
+    await loadCancerChart()
+    await loadTempChart()
+  } catch {
+    alert("Failed to load research data")
+  }
 })
 </script>
 
