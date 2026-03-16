@@ -1,8 +1,7 @@
 <template>
   <div class="page">
     <div class="container">
-
-      <h1 class="title"> Sunscreen Guide</h1>
+      <h1 class="title">Sunscreen Guide</h1>
       <p class="intro">Enter the current UV index to get your personalised sunscreen dosage recommendation.</p>
 
       <div class="input-section">
@@ -12,7 +11,6 @@
       </div>
 
       <div v-if="result" class="result-grid">
-
         <div class="stat-card">
           <div class="stat-value">{{ result.recommended_spf }}</div>
           <div class="stat-label">Recommended SPF</div>
@@ -32,13 +30,11 @@
           <div class="stat-value">{{ result.reapply_minutes }} min</div>
           <div class="stat-label">Reapply Every</div>
         </div>
-
       </div>
 
       <div v-if="result" class="note-card">
         <p>{{ result.note }}</p>
       </div>
-
     </div>
   </div>
 </template>
@@ -46,6 +42,7 @@
 <script setup>
 import { ref, onMounted } from "vue"
 import { useRoute } from "vue-router"
+import { API_BASE } from "@/config"
 
 const route = useRoute()
 const uvInput = ref("")
@@ -60,7 +57,13 @@ onMounted(() => {
 
 async function getRecommendation() {
   if (!uvInput.value) return
-  const res = await fetch(`/api/sunscreen?uv=${uvInput.value}`)
+
+  const res = await fetch(`${API_BASE}/api/sunscreen?uv=${uvInput.value}`)
+  if (!res.ok) {
+    alert("Failed to fetch recommendation")
+    return
+  }
+
   result.value = await res.json()
 }
 
@@ -68,7 +71,13 @@ async function useCurrentUV() {
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const lat = pos.coords.latitude
     const lon = pos.coords.longitude
-    const res = await fetch(`/api/uv?lat=${lat}&lon=${lon}`)
+
+    const res = await fetch(`${API_BASE}/api/uv?lat=${lat}&lon=${lon}`)
+    if (!res.ok) {
+      alert("Failed to fetch current UV")
+      return
+    }
+
     const data = await res.json()
     uvInput.value = data.uv_index
     getRecommendation()
