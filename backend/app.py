@@ -7,7 +7,6 @@ from sqlalchemy import inspect, text
 
 from database import Base, SessionLocal, engine
 
-# IMPORTANT: import models before create_all so tables are registered
 import models  # noqa: F401
 
 from routes.awareness import awareness_bp
@@ -31,7 +30,6 @@ CORS(
     resources={r"/api/*": {"origins": frontend_origins}},
 )
 
-# Only create tables on startup. Do NOT seed on startup.
 Base.metadata.create_all(bind=engine)
 
 app.register_blueprint(uv_bp)
@@ -79,12 +77,8 @@ def debug_db_status():
         return jsonify({"error": "DB debug failed", "details": str(e)}), 500
 
 
-@app.post("/api/admin/init-db")
+@app.get("/api/admin/init-db")
 def init_db():
-    """
-    Temporary one-time endpoint for free-plan Render, since Shell is unavailable.
-    Call this once after deploy to seed the database.
-    """
     try:
         Base.metadata.create_all(bind=engine)
         summary = seed_database()
