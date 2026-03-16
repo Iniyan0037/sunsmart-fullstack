@@ -59,18 +59,24 @@
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { uvStore } from "@/store/uvStore"
+import { API_BASE } from "@/config"
 
 const router = useRouter()
 const postcode = ref("")
 
 async function searchPostcode() {
   if (!postcode.value) return
+
   try {
     const res = await fetch(`https://api.zippopotam.us/au/${postcode.value}`)
-    if (!res.ok) { alert("Invalid Australian postcode"); return }
+    if (!res.ok) {
+      alert("Invalid Australian postcode")
+      return
+    }
+
     const data = await res.json()
     uvStore.location = data.places[0]["place name"]
-    getUV(data.places[0].latitude, data.places[0].longitude)
+    await getUV(data.places[0].latitude, data.places[0].longitude)
   } catch {
     alert("Postcode search failed")
   }
@@ -85,7 +91,11 @@ function getLocation() {
 
 async function getUV(lat, lon) {
   try {
-    const res = await fetch(`/api/uv?lat=${lat}&lon=${lon}`)
+    const res = await fetch(`${API_BASE}/api/uv?lat=${lat}&lon=${lon}`)
+    if (!res.ok) {
+      throw new Error("Failed to fetch UV data")
+    }
+
     const data = await res.json()
     uvStore.uv = parseFloat(data.uv_index).toFixed(1)
     setLevel()
@@ -96,16 +106,38 @@ async function getUV(lat, lon) {
 
 function setLevel() {
   const val = parseFloat(uvStore.uv)
-  if (val <= 2) { uvStore.level = "Low"; uvStore.uvColor = "#2ecc71"; uvStore.markerPosition = "5%" }
-  else if (val <= 5) { uvStore.level = "Moderate"; uvStore.uvColor = "#f1c40f"; uvStore.markerPosition = "30%" }
-  else if (val <= 7) { uvStore.level = "High"; uvStore.uvColor = "#e67e22"; uvStore.markerPosition = "50%" }
-  else if (val <= 10) { uvStore.level = "Very High"; uvStore.uvColor = "#e74c3c"; uvStore.markerPosition = "75%" }
-  else { uvStore.level = "Extreme"; uvStore.uvColor = "#8e44ad"; uvStore.markerPosition = "95%" }
+
+  if (val <= 2) {
+    uvStore.level = "Low"
+    uvStore.uvColor = "#2ecc71"
+    uvStore.markerPosition = "5%"
+  } else if (val <= 5) {
+    uvStore.level = "Moderate"
+    uvStore.uvColor = "#f1c40f"
+    uvStore.markerPosition = "30%"
+  } else if (val <= 7) {
+    uvStore.level = "High"
+    uvStore.uvColor = "#e67e22"
+    uvStore.markerPosition = "50%"
+  } else if (val <= 10) {
+    uvStore.level = "Very High"
+    uvStore.uvColor = "#e74c3c"
+    uvStore.markerPosition = "75%"
+  } else {
+    uvStore.level = "Extreme"
+    uvStore.uvColor = "#8e44ad"
+    uvStore.markerPosition = "95%"
+  }
 }
 
 function goAdvice() {
   const val = parseFloat(uvStore.uv)
-  if (!val) return router.push("/uv-advice")
+
+  if (Number.isNaN(val)) {
+    router.push("/uv-advice")
+    return
+  }
+
   if (val <= 2) router.push("/uv-advice/low")
   else if (val <= 5) router.push("/uv-advice/moderate")
   else if (val <= 7) router.push("/uv-advice/high")
@@ -120,7 +152,7 @@ function goAdvice() {
 .header { display:flex; justify-content:center; align-items:center; gap:10px; }
 .icon { font-size:30px; }
 .subtitle { text-align:center; margin-bottom:30px; }
-.location { display:flex; justify-content:center; gap:10px; margin-bottom:20px; }
+.location { display:flex; justify-content:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
 .location input { padding:10px; border-radius:8px; border:none; }
 .location button { padding:10px 20px; border:none; border-radius:8px; background:#3498db; color:white; cursor:pointer; }
 .uvCard { text-align:center; margin-bottom:30px; }
@@ -129,7 +161,7 @@ function goAdvice() {
 .barSection { margin-bottom:40px; text-align:center; }
 .uvBar { height:16px; background:linear-gradient(to right, #2ecc71, #f1c40f, #e67e22, #e74c3c, #8e44ad); border-radius:10px; position:relative; margin-top:10px; }
 .marker { width:10px; height:26px; background:white; position:absolute; top:-5px; border-radius:2px; transition:0.4s; }
-.labels { display:flex; justify-content:space-between; margin-top:8px; font-size:13px; }
+.labels { display:flex; justify-content:space-between; margin-top:8px; font-size:13px; gap:8px; }
 .low{color:#2ecc71;} .moderate{color:#f1c40f;} .high{color:#e67e22;} .veryhigh{color:#e74c3c;} .extreme{color:#8e44ad;}
 .card { background:rgba(255,255,255,0.15); padding:25px; border-radius:12px; margin-bottom:25px; cursor:pointer; }
 .card:hover { background:rgba(255,255,255,0.25); }
