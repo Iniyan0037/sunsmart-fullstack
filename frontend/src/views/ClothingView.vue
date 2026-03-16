@@ -1,8 +1,7 @@
 <template>
   <div class="page">
     <div class="container">
-
-      <h1 class="title"> Clothing Recommendations</h1>
+      <h1 class="title">Clothing Recommendations</h1>
       <p class="intro">Find out what to wear based on the current UV index to protect your skin outdoors.</p>
 
       <div class="input-section">
@@ -18,19 +17,18 @@
         <p class="note">{{ result.note }}</p>
         <ul class="items">
           <li v-for="item in result.items" :key="item">
-             {{ item }}
+            {{ item }}
           </li>
         </ul>
       </div>
-
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { useRoute } from "vue-router"
-
+import { API_BASE } from "@/config"
 
 const uvInput = ref("")
 const result = ref(null)
@@ -54,7 +52,13 @@ const uvColor = computed(() => {
 
 async function getRecommendation() {
   if (!uvInput.value) return
-  const res = await fetch(`/api/clothing?uv=${uvInput.value}`)
+
+  const res = await fetch(`${API_BASE}/api/clothing?uv=${uvInput.value}`)
+  if (!res.ok) {
+    alert("Failed to fetch recommendation")
+    return
+  }
+
   result.value = await res.json()
 }
 
@@ -62,7 +66,13 @@ async function useCurrentUV() {
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const lat = pos.coords.latitude
     const lon = pos.coords.longitude
-    const res = await fetch(`/api/uv?lat=${lat}&lon=${lon}`)
+
+    const res = await fetch(`${API_BASE}/api/uv?lat=${lat}&lon=${lon}`)
+    if (!res.ok) {
+      alert("Failed to fetch current UV")
+      return
+    }
+
     const data = await res.json()
     uvInput.value = data.uv_index
     getRecommendation()
