@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify
@@ -25,11 +26,40 @@ CORS(
     resources={r"/api/*": {"origins": frontend_origins}},
 )
 
+# create database tables
 Base.metadata.create_all(bind=engine)
 
+# register routes
 app.register_blueprint(uv_bp)
 app.register_blueprint(awareness_bp)
 app.register_blueprint(prevention_bp)
+
+
+# ---------- AUTO SEED DATABASE ----------
+def seed_database_once():
+    try:
+        from sqlalchemy import text
+        from database import SessionLocal
+
+        db = SessionLocal()
+
+        result = db.execute(text("SELECT COUNT(*) FROM cancer_rates")).scalar()
+
+        db.close()
+
+        # if table empty → seed database
+        if result == 0:
+            print("Database empty. Running seed script...")
+            subprocess.run(["python", "seed.py"], check=True)
+        else:
+            print("Database already seeded.")
+
+    except Exception as e:
+        print("Seed check failed:", e)
+
+
+seed_database_once()
+# ---------------------------------------
 
 
 @app.get("/")
