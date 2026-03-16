@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify
@@ -8,12 +7,13 @@ from sqlalchemy import inspect, text
 
 from database import Base, SessionLocal, engine
 
-# IMPORTANT: import models so SQLAlchemy registers all tables before create_all()
+# IMPORTANT: import models before create_all so tables are registered
 import models  # noqa: F401
 
 from routes.awareness import awareness_bp
 from routes.prevention import prevention_bp
 from routes.uv import uv_bp
+from seed import seed_database
 
 load_dotenv()
 
@@ -31,38 +31,8 @@ CORS(
     resources={r"/api/*": {"origins": frontend_origins}},
 )
 
-# This now works because models have been imported above
+# Only create tables on startup. Do NOT seed on startup.
 Base.metadata.create_all(bind=engine)
-
-
-def seed_database_once():
-    try:
-        inspector = inspect(engine)
-        existing_tables = set(inspector.get_table_names())
-
-        required_tables = {"cancer_rates", "cancer_ratios", "uv_summary"}
-
-        if not required_tables.issubset(existing_tables):
-            print("Required tables missing. Running seed script...")
-            subprocess.run(["python", "seed.py"], check=True)
-            return
-
-        db = SessionLocal()
-        try:
-            count = db.execute(text("SELECT COUNT(*) FROM cancer_rates")).scalar()
-            if int(count or 0) == 0:
-                print("Tables exist but database is empty. Running seed script...")
-                subprocess.run(["python", "seed.py"], check=True)
-            else:
-                print("Database already seeded.")
-        finally:
-            db.close()
-
-    except Exception as e:
-        print("Seed check failed:", e)
-
-
-seed_database_once()
 
 app.register_blueprint(uv_bp)
 app.register_blueprint(awareness_bp)
@@ -107,6 +77,25 @@ def debug_db_status():
         )
     except Exception as e:
         return jsonify({"error": "DB debug failed", "details": str(e)}), 500
+
+
+@app.post("/api/admin/init-db")
+def init_db():
+    """
+    Temporary one-time endpoint for free-plan Render, since Shell is unavailable.
+    Call this once after deploy to seed the database.
+    """
+    try:
+        Base.metadata.create_all(bind=engine)
+        summary = seed_database()
+        return jsonify(
+            {
+                "message": "Database initialised successfully",
+                "summary": summary,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": "Database initialisation failed", "details": str(e)}), 500
 
 
 if __name__ == "__main__":
