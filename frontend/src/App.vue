@@ -28,13 +28,18 @@ html, body, #app {
 }
 
 body {
+  background: #111;
   background-size: cover;
   background-attachment: fixed;
+  overflow-x: hidden;
 }
 
 #app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 </style>
