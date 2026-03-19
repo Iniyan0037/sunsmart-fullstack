@@ -1,141 +1,109 @@
-import math
-
 from flask import Blueprint, jsonify, request
 from sqlalchemy import text
-
-from database import SessionLocal
+from database import engine
 
 awareness_bp = Blueprint("awareness", __name__)
 
 
-@awareness_bp.route("/api/cancer-stats", methods=["GET"])
-def cancer_stats():
-    db = SessionLocal()
+# -----------------------------
+# Helper: safe float conversion
+# -----------------------------
+def safe_float(value):
     try:
-        result = db.execute(
-            text(
-                """
-                SELECT year, sex, age_std_rate_aust
+        if value is None:
+            return None
+        return float(value)
+    except:
+        return None
+
+
+# ---------------------------------------
+# GET /api/cancer-stats  (FIXED VERSION)
+# ---------------------------------------
+@awareness_bp.route("/api/cancer-stats", methods=["GET"])
+def get_cancer_stats():
+    try:
+        with engine.connect() as db:
+            result = db.execute(text("""
+                SELECT 
+                    year, 
+                    sex, 
+                    AVG(age_std_rate_aust) as age_std_rate_aust
                 FROM cancer_rates
                 WHERE cancer_type = 'Melanoma of the skin'
-                  AND age_std_rate_aust IS NOT NULL
-                  AND sex IN ('Male', 'Female')
+                AND age_std_rate_aust IS NOT NULL
+                AND sex IN ('Male', 'Female')
+                GROUP BY year, sex
                 ORDER BY year ASC
-                """
-            )
-        ).mappings().all()
+            """)).fetchall()
 
         male_data = {}
         female_data = {}
 
         for row in result:
-            year = row["year"]
-            sex = row["sex"]
-            rate = row["age_std_rate_aust"]
+            year = row[0]
+            sex = row[1]
+            value = safe_float(row[2])
 
-            if year is None or sex is None or rate is None:
-                continue
-
-            try:
-                rate_value = float(rate)
-            except (TypeError, ValueError):
-                continue
-
-            if math.isnan(rate_value) or math.isinf(rate_value):
+            if value is None:
                 continue
 
             if sex == "Male":
-                male_data[int(year)] = round(rate_value, 2)
+                male_data[year] = value
             elif sex == "Female":
-                female_data[int(year)] = round(rate_value, 2)
+                female_data[year] = value
 
+        # Get sorted years
         years = sorted(set(male_data.keys()) | set(female_data.keys()))
 
-        return jsonify(
-            {
-                "labels": years,
-                "datasets": [
-                    {
-                        "label": "Male",
-                        "data": [male_data.get(y, None) for y in years],
-                        "borderColor": "#3498db",
-                        "backgroundColor": "rgba(52,152,219,0.2)",
-                    },
-                    {
-                        "label": "Female",
-                        "data": [female_data.get(y, None) for y in years],
-                        "borderColor": "#e74c3c",
-                        "backgroundColor": "rgba(231,76,60,0.2)",
-                    },
-                ],
-            }
-        )
-    finally:
-        db.close()
+        male_values = [male_data.get(year, None) for year in years]
+        female_values = [female_data.get(year, None) for year in years]
+
+        return jsonify({
+            "years": years,
+            "male": male_values,
+            "female": female_values
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
+# ---------------------------------------
+# GET /api/uv-trends
+# ---------------------------------------
 @awareness_bp.route("/api/uv-trends", methods=["GET"])
-def uv_trends():
+def get_uv_trends():
     city = request.args.get("city", "Melbourne")
 
-    db = SessionLocal()
     try:
-        result = db.execute(
-            text(
-                """
-                SELECT
-                    EXTRACT(YEAR FROM date::date) AS year,
-                    ROUND(AVG(avg_temperature)::numeric, 2) AS avg_temp
+        with engine.connect() as db:
+            result = db.execute(text("""
+                SELECT year, avg_temp
                 FROM uv_summary
                 WHERE city = :city
-                  AND avg_temperature IS NOT NULL
-                GROUP BY year
+                AND avg_temp IS NOT NULL
                 ORDER BY year ASC
-                """
-            ),
-            {"city": city},
-        ).mappings().all()
+            """), {"city": city}).fetchall()
 
         years = []
         temps = []
 
         for row in result:
-            year = row["year"]
-            avg_temp = row["avg_temp"]
+            year = row[0]
+            temp = safe_float(row[1])
 
-            if year is None or avg_temp is None:
+            if temp is None:
                 continue
 
-            try:
-                temp_value = float(avg_temp)
-            except (TypeError, ValueError):
-                continue
+            years.append(year)
+            temps.append(temp)
 
-            if math.isnan(temp_value) or math.isinf(temp_value):
-                continue
+        return jsonify({
+            "city": city,
+            "years": years,
+            "temps": temps
+        })
 
-            years.append(int(year))
-            temps.append(temp_value)
-
-        cities_result = db.execute(
-            text("SELECT DISTINCT city FROM uv_summary WHERE city IS NOT NULL ORDER BY city")
-        ).mappings().all()
-        cities = [row["city"] for row in cities_result]
-
-        return jsonify(
-            {
-                "city": city,
-                "cities": cities,
-                "labels": years,
-                "datasets": [
-                    {
-                        "label": f"Avg Temperature - {city}",
-                        "data": temps,
-                        "borderColor": "#e67e22",
-                        "backgroundColor": "rgba(230,126,34,0.2)",
-                    }
-                ],
-            }
-        )
-    finally:
-        db.close()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
