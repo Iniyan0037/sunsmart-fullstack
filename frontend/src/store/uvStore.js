@@ -2,8 +2,9 @@ import { reactive } from "vue"
 
 export const uvStore = reactive({
   uv: null,
-  location: "",
+  location: "Australia",
   level: "",
-  uvColor: "#2ecc71",
-  markerPosition: "0%",
+  uvColor: "#f1c40f",
+  markerPosition: "20%",
+  fetched: false,
 })
