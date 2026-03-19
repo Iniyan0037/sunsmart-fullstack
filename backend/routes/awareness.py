@@ -1,109 +1,145 @@
+import math
+
 from flask import Blueprint, jsonify, request
 from sqlalchemy import text
-from database import engine
+
+from database import SessionLocal
 
 awareness_bp = Blueprint("awareness", __name__)
 
 
-# -----------------------------
-# Helper: safe float conversion
-# -----------------------------
-def safe_float(value):
-    try:
-        if value is None:
-            return None
-        return float(value)
-    except:
-        return None
-
-
-# ---------------------------------------
-# GET /api/cancer-stats  (FIXED VERSION)
-# ---------------------------------------
 @awareness_bp.route("/api/cancer-stats", methods=["GET"])
-def get_cancer_stats():
+def cancer_stats():
+    db = SessionLocal()
     try:
-        with engine.connect() as db:
-            result = db.execute(text("""
-                SELECT 
-                    year, 
-                    sex, 
-                    AVG(age_std_rate_aust) as age_std_rate_aust
+        result = db.execute(
+            text(
+                """
+                SELECT
+                    year,
+                    sex,
+                    ROUND(AVG(age_std_rate_aust)::numeric, 2) AS age_std_rate_aust
                 FROM cancer_rates
                 WHERE cancer_type = 'Melanoma of the skin'
-                AND age_std_rate_aust IS NOT NULL
-                AND sex IN ('Male', 'Female')
+                  AND age_std_rate_aust IS NOT NULL
+                  AND sex IN ('Male', 'Female')
                 GROUP BY year, sex
                 ORDER BY year ASC
-            """)).fetchall()
+                """
+            )
+        ).mappings().all()
 
         male_data = {}
         female_data = {}
 
         for row in result:
-            year = row[0]
-            sex = row[1]
-            value = safe_float(row[2])
+            year = row["year"]
+            sex = row["sex"]
+            rate = row["age_std_rate_aust"]
 
-            if value is None:
+            if year is None or sex is None or rate is None:
+                continue
+
+            try:
+                rate_value = float(rate)
+            except (TypeError, ValueError):
+                continue
+
+            if math.isnan(rate_value) or math.isinf(rate_value):
                 continue
 
             if sex == "Male":
-                male_data[year] = value
+                male_data[int(year)] = round(rate_value, 2)
             elif sex == "Female":
-                female_data[year] = value
+                female_data[int(year)] = round(rate_value, 2)
 
-        # Get sorted years
         years = sorted(set(male_data.keys()) | set(female_data.keys()))
 
-        male_values = [male_data.get(year, None) for year in years]
-        female_values = [female_data.get(year, None) for year in years]
+        return jsonify(
+            {
+                "labels": years,
+                "datasets": [
+                    {
+                        "label": "Male",
+                        "data": [male_data.get(y, None) for y in years],
+                        "borderColor": "#3498db",
+                        "backgroundColor": "rgba(52,152,219,0.2)",
+                    },
+                    {
+                        "label": "Female",
+                        "data": [female_data.get(y, None) for y in years],
+                        "borderColor": "#e74c3c",
+                        "backgroundColor": "rgba(231,76,60,0.2)",
+                    },
+                ],
+            }
+        )
+    finally:
+        db.close()
 
-        return jsonify({
-            "years": years,
-            "male": male_values,
-            "female": female_values
-        })
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ---------------------------------------
-# GET /api/uv-trends
-# ---------------------------------------
 @awareness_bp.route("/api/uv-trends", methods=["GET"])
-def get_uv_trends():
+def uv_trends():
     city = request.args.get("city", "Melbourne")
 
+    db = SessionLocal()
     try:
-        with engine.connect() as db:
-            result = db.execute(text("""
-                SELECT year, avg_temp
+        result = db.execute(
+            text(
+                """
+                SELECT
+                    EXTRACT(YEAR FROM date::date) AS year,
+                    ROUND(AVG(avg_temperature)::numeric, 2) AS avg_temp
                 FROM uv_summary
                 WHERE city = :city
-                AND avg_temp IS NOT NULL
+                  AND avg_temperature IS NOT NULL
+                GROUP BY year
                 ORDER BY year ASC
-            """), {"city": city}).fetchall()
+                """
+            ),
+            {"city": city},
+        ).mappings().all()
 
         years = []
         temps = []
 
         for row in result:
-            year = row[0]
-            temp = safe_float(row[1])
+            year = row["year"]
+            avg_temp = row["avg_temp"]
 
-            if temp is None:
+            if year is None or avg_temp is None:
                 continue
 
-            years.append(year)
-            temps.append(temp)
+            try:
+                temp_value = float(avg_temp)
+            except (TypeError, ValueError):
+                continue
 
-        return jsonify({
-            "city": city,
-            "years": years,
-            "temps": temps
-        })
+            if math.isnan(temp_value) or math.isinf(temp_value):
+                continue
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+            years.append(int(year))
+            temps.append(temp_value)
+
+        cities_result = db.execute(
+            text("SELECT DISTINCT city FROM uv_summary WHERE city IS NOT NULL ORDER BY city")
+        ).mappings().all()
+        cities = [row["city"] for row in cities_result]
+
+        return jsonify(
+            {
+                "city": city,
+                "cities": cities,
+                "labels": years,
+                "datasets": [
+                    {
+                        "label": f"Avg Temperature - {city}",
+                        "data": temps,
+                        "borderColor": "#e67e22",
+                        "backgroundColor": "rgba(230,126,34,0.2)",
+                    }
+                ],
+            }
+        )
+    finally:
+        db.close()
